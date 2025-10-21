@@ -270,7 +270,6 @@ with st.sidebar:
         if not st.session_state.api_configured:
             try:
                 genai.configure(api_key=st.session_state.api_key)
-                # Test API key
                 model = genai.GenerativeModel('gemini-1.5-flash')
                 st.session_state.api_configured = True
                 st.success("✅ API Key hợp lệ", icon="✅")
@@ -336,10 +335,8 @@ with tab1:
         if st.session_state.docx_text:
             st.success("✅ Đã tải lên và trích xuất nội dung file thành công!")
             
-            # Trích xuất thông tin tự động
             extracted_data = extract_info_from_text(st.session_state.docx_text)
             
-            # Cập nhật session state với dữ liệu trích xuất được
             for key, value in extracted_data.items():
                 st.session_state[key] = value
             
@@ -496,4 +493,4 @@ Nội dung phương án kinh doanh:
                 # Phân tích 2 - Dựa trên Dữ liệu đã hiệu chỉnh
                 with st.spinner("AI đang phân tích các chỉ số tài chính..."):
                     loan_to_capital_ratio = (st.session_state.loan_amount / st.session_state.total_capital) * 100 if st.session_state.total_capital > 0 else 0
-                    loan_to_coll
+                    loan_to_collateral_ratio = (st.session_state.loan_amount / st.session_state.collateral_value) * 100 if st.session_state.collateral_value > 0
