@@ -350,7 +350,7 @@ with tab4:
         if st.button("Bắt đầu Phân tích", type="primary", use_container_width=True):
             try:
                 genai.configure(api_key=st.session_state.api_key)
-                model = genai.GenerativeModel('gemini-1.5-flash-latest') # Sử dụng model mới nhất
+                model = genai.GenerativeModel('gemini-2.5-flash-latest') # Sử dụng model mới nhất
 
                 # Phân tích 1 - Dựa trên File gốc
                 if st.session_state.docx_text:
