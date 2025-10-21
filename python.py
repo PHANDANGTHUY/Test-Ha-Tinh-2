@@ -456,4 +456,4 @@ with tab5:
                 st.session_state.chat_history.append({"role": "assistant", "content": response_text})
 
             if st.session_state.chat_history:
-                if st.button("X
+                if st.button("X")
