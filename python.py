@@ -208,29 +208,29 @@ if 'docx_text' not in st.session_state:
 
 # Dữ liệu nhập liệu
 if 'full_name' not in st.session_state:
-    st.session_state.full_name = "Nguyễn Thị A"
+    st.session_state.full_name = "......."
 if 'cccd' not in st.session_state:
-    st.session_state.cccd = "012345678910"
+    st.session_state.cccd = "......."
 if 'address' not in st.session_state:
-    st.session_state.address = "Hà Nội, Việt Nam"
+    st.session_state.address = "......."
 if 'phone' not in st.session_state:
-    st.session_state.phone = "0987654321"
+    st.session_state.phone = "......."
 if 'loan_purpose' not in st.session_state:
-    st.session_state.loan_purpose = "Bổ sung vốn lưu động kinh doanh vật liệu xây dựng"
+    st.session_state.loan_purpose = "......."
 if 'total_capital' not in st.session_state:
-    st.session_state.total_capital = 7800000000.0
+    st.session_state.total_capital = 0
 if 'equity_capital' not in st.session_state:
-    st.session_state.equity_capital = 500000000.0
+    st.session_state.equity_capital = 0
 if 'loan_amount' not in st.session_state:
-    st.session_state.loan_amount = 7300000000.0
+    st.session_state.loan_amount = 0
 if 'interest_rate' not in st.session_state:
-    st.session_state.interest_rate = 5.0
+    st.session_state.interest_rate = 0
 if 'loan_term' not in st.session_state:
-    st.session_state.loan_term = 12
+    st.session_state.loan_term = 0
 if 'collateral_desc' not in st.session_state:
-    st.session_state.collateral_desc = "Quyền sử dụng đất và tài sản gắn liền với đất tại..."
+    st.session_state.collateral_desc = 0
 if 'collateral_value' not in st.session_state:
-    st.session_state.collateral_value = 10000000000.0
+    st.session_state.collateral_value = 0
 
 # Kết quả phân tích
 if 'repayment_df' not in st.session_state:
