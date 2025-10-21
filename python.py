@@ -430,7 +430,7 @@ with tab5:
     else:
         try:
             genai.configure(api_key=st.session_state.api_key)
-            model = genai.GenerativeModel('gemini-1.5-flash-latest')
+            model = genai.GenerativeModel('gemini-2.5-flash-latest')
             chat = model.start_chat(history=[])
 
             # Hiển thị lịch sử chat
