@@ -456,4 +456,9 @@ with tab5:
                 st.session_state.chat_history.append({"role": "assistant", "content": response_text})
 
             if st.session_state.chat_history:
-                if st.button("X")
+                if st.button("Xóa lịch sử trò chuyện"):
+                    st.session_state.chat_history = []
+                    st.rerun()
+
+        except Exception as e:
+            st.error(f"Đã xảy ra lỗi với Chatbot: {e}")
