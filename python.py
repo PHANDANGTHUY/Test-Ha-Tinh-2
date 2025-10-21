@@ -20,7 +20,7 @@ def format_currency(value):
     """Định dạng số thành chuỗi tiền tệ với dấu chấm phân cách hàng nghìn."""
     if pd.isna(value):
         return ""
-    return f"{int(value):,.0f}".replace(",", ".")
+    return f"{int(value):,}".replace(",", ".")
 
 def extract_text_from_docx(docx_file):
     """Trích xuất toàn bộ văn bản từ file .docx."""
@@ -219,7 +219,6 @@ with tab1:
         st.session_state.docx_text = extract_text_from_docx(uploaded_file)
         st.success("Đã tải lên và trích xuất nội dung file thành công!")
         # Logic giả định để trích xuất thông tin cơ bản
-        # Lưu ý: Đây là phần giả định đơn giản, thực tế cần các mô hình NLP phức tạp hơn.
         if "Nguyễn Thị a" in st.session_state.docx_text:
              st.session_state.full_name = "Nguyễn Thị a"
         if "7.300.000.000" in st.session_state.docx_text:
@@ -350,7 +349,7 @@ with tab4:
         if st.button("Bắt đầu Phân tích", type="primary", use_container_width=True):
             try:
                 genai.configure(api_key=st.session_state.api_key)
-                model = genai.GenerativeModel('gemini-2.0-flash-latest') # Sử dụng model mới nhất
+                model = genai.GenerativeModel('gemini-1.5-flash')
 
                 # Phân tích 1 - Dựa trên File gốc
                 if st.session_state.docx_text:
@@ -414,7 +413,7 @@ with tab4:
             st.caption("_Nguồn dữ liệu: Phân tích từ file .docx của khách hàng._")
             st.markdown(st.session_state.ai_analysis_from_file)
         
-        st.write("") # Thêm khoảng trống
+        st.write("")
 
         with st.container(border=True):
             st.markdown("##### 💹 **Phân tích 2: Dựa trên Dữ liệu đã hiệu chỉnh**")
@@ -430,8 +429,7 @@ with tab5:
     else:
         try:
             genai.configure(api_key=st.session_state.api_key)
-            model = genai.GenerativeModel('gemini-2.0-flash-latest')
-            chat = model.start_chat(history=[])
+            model = genai.GenerativeModel('gemini-1.5-flash')
 
             # Hiển thị lịch sử chat
             for message in st.session_state.chat_history:
@@ -440,15 +438,12 @@ with tab5:
 
             # Nhận input từ người dùng
             if prompt := st.chat_input("Bạn cần hỗ trợ gì về nghiệp vụ tín dụng?"):
-                # Thêm tin nhắn của người dùng vào lịch sử
                 st.session_state.chat_history.append({"role": "user", "content": prompt})
                 with st.chat_message("user"):
                     st.markdown(prompt)
                 
-                # Gửi tin nhắn đến Gemini và nhận phản hồi
                 with st.chat_message("assistant"):
                     with st.spinner("AI đang suy nghĩ..."):
-                        # Xây dựng lại context từ lịch sử
                         context_history = []
                         for msg in st.session_state.chat_history:
                              context_history.append(f"{msg['role']}: {msg['content']}")
@@ -458,13 +453,7 @@ with tab5:
                         response_text = response.text
                         st.markdown(response_text)
                 
-                # Thêm phản hồi của AI vào lịch sử
                 st.session_state.chat_history.append({"role": "assistant", "content": response_text})
 
             if st.session_state.chat_history:
-                if st.button("Xóa lịch sử trò chuyện"):
-                    st.session_state.chat_history = []
-                    st.rerun()
-
-        except Exception as e:
-            st.error(f"Đã xảy ra lỗi với Chatbot: {e}")
+                if st.button("X
