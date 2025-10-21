@@ -375,7 +375,7 @@ with tab4:
     else:
         try:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-1.5-flash-latest') # Hoặc gemini-pro
+            model = genai.GenerativeModel('gemini-2.5-flash') # Hoặc gemini-pro
         except Exception as e:
             st.error(f"Lỗi khởi tạo Gemini: {e}")
             model = None
@@ -456,7 +456,7 @@ with tab5:
     else:
         try:
             # Khởi tạo model cho chatbot
-            model_chat = genai.GenerativeModel('gemini-1.5-flash-latest')
+            model_chat = genai.GenerativeModel('gemini-2.5-flash')
             chat = model_chat.start_chat(history=[])
         except Exception as e:
             st.error(f"Lỗi khởi tạo Gemini Chat: {e}")
