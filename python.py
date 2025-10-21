@@ -492,5 +492,97 @@ Nội dung phương án kinh doanh:
 
                 # Phân tích 2 - Dựa trên Dữ liệu đã hiệu chỉnh
                 with st.spinner("AI đang phân tích các chỉ số tài chính..."):
-                    loan_to_capital_ratio = (st.session_state.loan_amount / st.session_state.total_capital) * 100 if st.session_state.total_capital > 0 else 0
-                    loan_to_collateral_ratio = (st.session_state.loan_amount / st.session_state.collateral_value) * 100 if st.session_state.collateral_value > 0
+                    loan_to_capital_ratio = 0
+                    if st.session_state.total_capital > 0:
+                        loan_to_capital_ratio = (st.session_state.loan_amount / st.session_state.total_capital) * 100
+                    
+                    loan_to_collateral_ratio = 0
+                    if st.session_state.collateral_value > 0:
+                        loan_to_collateral_ratio = (st.session_state.loan_amount / st.session_state.collateral_value) * 100
+                    
+                    data_summary = f"""
+- Mục đích vay: {st.session_state.loan_purpose}
+- Tổng nhu cầu vốn: {format_currency(st.session_state.total_capital)} VND
+- Vốn đối ứng: {format_currency(st.session_state.equity_capital)} VND
+- Số tiền vay: {format_currency(st.session_state.loan_amount)} VND
+- Lãi suất: {st.session_state.interest_rate} %/năm
+- Thời gian vay: {st.session_state.loan_term} tháng
+- Tổng giá trị TSBĐ: {format_currency(st.session_state.collateral_value)} VND
+- Tỷ lệ Vay/Tổng nhu cầu vốn: {loan_to_capital_ratio:.2f} %
+- Tỷ lệ Vay/TSBĐ: {loan_to_collateral_ratio:.2f} %
+"""
+                    prompt2 = f"""
+Bạn là một chuyên gia thẩm định tín dụng ngân hàng. Dựa vào các thông số tài chính của một khoản vay dưới đây, hãy đưa ra nhận định về tính khả thi.
+Phân tích các khía cạnh sau:
+1. **Tính hợp lý của các chỉ số:** Đánh giá các tỷ lệ Vay/Tổng vốn, Vay/TSBĐ. Các chỉ số này có an toàn cho ngân hàng không?
+2. **Khả năng trả nợ:** Dựa trên số tiền vay và thời hạn, nhận xét về áp lực trả nợ hàng tháng lên khách hàng.
+3. **Rủi ro tài chính:** Dựa trên các con số này, có rủi ro nào đáng chú ý không (ví dụ: đòn bẩy tài chính quá cao, TSBĐ chưa đủ...)?
+4. **Kết luận sơ bộ:** Đưa ra kết luận ban đầu về mức độ rủi ro của khoản vay này.
+
+Dữ liệu tài chính:
+---
+{data_summary}
+---
+"""
+                    response2 = model.generate_content(prompt2)
+                    st.session_state.ai_analysis_from_data = response2.text
+
+                st.success("✅ Hoàn tất phân tích!")
+
+            except Exception as e:
+                st.error(f"Đã xảy ra lỗi khi gọi Gemini API: {e}")
+    
+    if st.session_state.ai_analysis_from_file or st.session_state.ai_analysis_from_data:
+        with st.container(border=True):
+            st.markdown("##### 📝 **Phân tích 1: Dựa trên File gốc**")
+            st.caption("_Nguồn dữ liệu: Phân tích từ file .docx của khách hàng._")
+            st.markdown(st.session_state.ai_analysis_from_file)
+        
+        st.write("")
+
+        with st.container(border=True):
+            st.markdown("##### 💹 **Phân tích 2: Dựa trên Dữ liệu đã hiệu chỉnh**")
+            st.caption("_Nguồn dữ liệu: Phân tích từ các thông số và chỉ số đã tính toán trên ứng dụng._")
+            st.markdown(st.session_state.ai_analysis_from_data)
+
+# --- Tab 5: Chatbot Hỗ trợ ---
+with tab5:
+    st.header("Chatbot Hỗ trợ nghiệp vụ")
+
+    if not st.session_state.api_configured:
+        st.warning("⚠️ Vui lòng nhập Gemini API Key hợp lệ ở thanh bên để sử dụng tính năng này.")
+    else:
+        try:
+            model = genai.GenerativeModel('gemini-1.5-flash')
+
+            # Hiển thị lịch sử chat
+            for message in st.session_state.chat_history:
+                with st.chat_message(message["role"]):
+                    st.markdown(message["content"])
+
+            # Nhận input từ người dùng
+            if prompt := st.chat_input("Bạn cần hỗ trợ gì về nghiệp vụ tín dụng?"):
+                st.session_state.chat_history.append({"role": "user", "content": prompt})
+                with st.chat_message("user"):
+                    st.markdown(prompt)
+                
+                with st.chat_message("assistant"):
+                    with st.spinner("AI đang suy nghĩ..."):
+                        context_history = []
+                        for msg in st.session_state.chat_history:
+                            context_history.append(f"{msg['role']}: {msg['content']}")
+                        full_prompt = "\n".join(context_history)
+
+                        response = model.generate_content(full_prompt)
+                        response_text = response.text
+                        st.markdown(response_text)
+                
+                st.session_state.chat_history.append({"role": "assistant", "content": response_text})
+
+            if st.session_state.chat_history:
+                if st.button("🗑️ Xóa lịch sử trò chuyện"):
+                    st.session_state.chat_history = []
+                    st.rerun()
+
+        except Exception as e:
+            st.error(f"Đã xảy ra lỗi với Chatbot: {e}")
