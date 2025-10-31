@@ -29,17 +29,13 @@ if 'chat_history' not in st.session_state:
 # CÁC HÀM HỖ TRỢ (HELPERS)
 # ======================================================================================
 def format_currency(value, decimal_places=0):
-    """Định dạng số thành chuỗi tiền tệ với dấu chấm phân cách hàng nghìn."""
+    """Định dạng số thành chuỗi tiền tệ với dấu chấm phân cách hàng nghìn và dấu phẩy thập phân."""
     if value is None or not isinstance(value, (int, float)):
         return "0"
-    # Format với dấu phẩy trước
+    # Format với dấu phẩy phân cách nghìn (Python mặc định)
     formatted = f"{value:,.{decimal_places}f}"
-    # Thay thế dấu chấm thập phân tạm thời bằng placeholder
-    formatted = formatted.replace(".", "DECIMAL")
-    # Thay thế dấu phẩy phân cách hàng nghìn thành dấu chấm
-    formatted = formatted.replace(",", ".")
-    # Khôi phục dấu phẩy thập phân (nếu có)
-    formatted = formatted.replace("DECIMAL", ",")
+    # Đổi dấu: phẩy (nghìn) -> chấm, chấm (thập phân) -> phẩy
+    formatted = formatted.replace(",", "TEMP").replace(".", ",").replace("TEMP", ".")
     return formatted
 
 def extract_text_from_docx(docx_file):
@@ -155,9 +151,9 @@ def generate_report_docx(customer_info, loan_info, collateral_info, ratios, ai_a
     doc.add_paragraph(f"Tổng giá trị định giá: {format_currency(collateral_info['tsdb_gia_tri'])} VNĐ")
     # Phân tích từ AI
     doc.add_heading('4. Phân tích tự động bởi AI', level=2)
-    doc.add_heading('4.1. Phân tích từ file .docx của khách hàng', level=3)
+    doc.add_heading('4.1. Phân tích từ dữ liệu trên ứng dụng', level=3)
     doc.add_paragraph(ai_analysis_1 if ai_analysis_1 else "Chưa có phân tích.")
-    doc.add_heading('4.2. Phân tích từ dữ liệu đã hiệu chỉnh trên ứng dụng', level=3)
+    doc.add_heading('4.2. Phân tích từ file .docx của khách hàng', level=3)
     doc.add_paragraph(ai_analysis_2 if ai_analysis_2 else "Chưa có phân tích.")
     # Lưu vào buffer
     buffer = BytesIO()
@@ -384,76 +380,90 @@ with tab4:
     else:
         try:
             genai.configure(api_key=api_key)
-            model = genai.GenerativeModel('gemini-2.5-flash') # Hoặc gemini-pro
+            model = genai.GenerativeModel('gemini-2.0-flash-exp') # Hoặc gemini-pro
         except Exception as e:
             st.error(f"Lỗi khởi tạo Gemini: {e}")
             model = None
         if st.button("🚀 Bắt đầu Phân tích", use_container_width=True, disabled=(not model or not st.session_state.data_extracted)):
            
-            # Phân tích 1: Dựa trên file .docx gốc
-            with st.spinner("AI đang phân tích nội dung file .docx..."):
-                if st.session_state.docx_text:
-                    prompt1 = f"""
-                    Với vai trò là một chuyên gia thẩm định tín dụng ngân hàng, hãy phân tích toàn bộ nội dung của phương án kinh doanh dưới đây.
-                    Cần tập trung vào các điểm sau:
-                    1. Tóm tắt tổng quan về phương án kinh doanh.
-                    2. Phân tích các điểm mạnh của phương án (ví dụ: kinh nghiệm, thị trường, sản phẩm).
-                    3. Phân tích các điểm yếu hoặc các điểm cần làm rõ.
-                    4. Nhận diện các rủi ro tiềm ẩn (thị trường, hoạt động, tài chính).
-                    5. Đưa ra một kết luận sơ bộ về tính khả thi của phương án.
-                    Nội dung phương án kinh doanh:
-                    ---
-                    {st.session_state.docx_text}
-                    ---
-                    """
-                    try:
-                        response1 = model.generate_content(prompt1)
-                        st.session_state.ai_analysis_1 = response1.text
-                    except Exception as e:
-                        st.session_state.ai_analysis_1 = f"Lỗi khi gọi API Gemini: {e}"
-                else:
-                    st.session_state.ai_analysis_1 = "Không có nội dung file để phân tích."
-           
-            # Phân tích 2: Dựa trên dữ liệu đã hiệu chỉnh
-            with st.spinner("AI đang phân tích các chỉ số và dữ liệu đã hiệu chỉnh..."):
+            # Phân tích 1: Dựa trên dữ liệu đã hiệu chỉnh trên ứng dụng
+            with st.spinner("AI đang phân tích các chỉ số và dữ liệu đã hiệu chỉnh trên ứng dụng..."):
                 # Tổng hợp thông tin từ session_state thành một chuỗi
                 adjusted_data_summary = f"""
                 - Khách hàng: {st.session_state.ho_ten}, CCCD: {st.session_state.cccd}
+                - Địa chỉ: {st.session_state.dia_chi}
+                - Số điện thoại: {st.session_state.sdt}
                 - Mục đích vay: {st.session_state.muc_dich_vay}
                 - Tổng nhu cầu vốn: {format_currency(st.session_state.tong_nhu_cau_von)} VNĐ
                 - Vốn đối ứng: {format_currency(st.session_state.von_doi_ung)} VNĐ
                 - Số tiền vay: {format_currency(st.session_state.so_tien_vay)} VNĐ
                 - Lãi suất: {st.session_state.lai_suat}%/năm
                 - Thời gian vay: {st.session_state.thoi_gian_vay} tháng
+                - Mô tả TSĐB: {st.session_state.tsdb_mo_ta}
                 - Tổng giá trị TSĐB: {format_currency(st.session_state.tsdb_gia_tri)} VNĐ
                 - Tỷ lệ Vay/TSĐB: {st.session_state.get('ratios', {}).get('Tỷ lệ Vay/Giá trị TSĐB', 'N/A')}
                 - Tỷ lệ Vay/Tổng vốn: {st.session_state.get('ratios', {}).get('Tỷ lệ Vay/Tổng nhu cầu vốn', 'N/A')}
+                - Tỷ lệ Vốn đối ứng: {st.session_state.get('ratios', {}).get('Tỷ lệ Vốn đối ứng/Tổng nhu cầu vốn', 'N/A')}
                 """
                
-                prompt2 = f"""
-                Với vai trò là một chuyên gia thẩm định tín dụng, hãy phân tích sâu về các chỉ số tài chính của phương án vay vốn dựa trên các thông số đã được chuyên viên tín dụng hiệu chỉnh dưới đây.
+                prompt1 = f"""
+                Với vai trò là một chuyên gia thẩm định tín dụng ngân hàng, hãy phân tích sâu về các chỉ số tài chính của phương án vay vốn dựa trên các thông số đã được nhập và hiệu chỉnh trên hệ thống dưới đây.
+                
                 Hãy tập trung vào:
-                1. Đánh giá tính hợp lý của số tiền vay so với nhu cầu vốn và vốn đối ứng.
-                2. Phân tích khả năng trả nợ dựa trên số tiền vay, lãi suất và thời hạn.
-                3. Đánh giá mức độ an toàn của khoản vay dựa trên tỷ lệ cho vay so với giá trị tài sản đảm bảo.
-                4. Đưa ra các khuyến nghị (nếu có) để tăng tính khả thi cho phương án.
-                Dữ liệu đã hiệu chỉnh:
+                1. Đánh giá tổng quan về thông tin khách hàng và mục đích vay vốn
+                2. Phân tích tính hợp lý của cơ cấu nguồn vốn (tỷ lệ vay/vốn đối ứng/tổng nhu cầu)
+                3. Đánh giá khả năng trả nợ dựa trên số tiền vay, lãi suất và thời hạn
+                4. Phân tích mức độ an toàn của khoản vay dựa trên tỷ lệ cho vay so với giá trị tài sản đảm bảo (LTV)
+                5. Đưa ra các khuyến nghị cụ thể để tăng tính khả thi cho phương án
+                6. Đánh giá rủi ro tín dụng và các điểm cần lưu ý
+                
+                Dữ liệu đã nhập trên ứng dụng:
                 ---
                 {adjusted_data_summary}
                 ---
                 """
                 try:
-                    response2 = model.generate_content(prompt2)
-                    st.session_state.ai_analysis_2 = response2.text
+                    response1 = model.generate_content(prompt1)
+                    st.session_state.ai_analysis_1 = response1.text
                 except Exception as e:
-                     st.session_state.ai_analysis_2 = f"Lỗi khi gọi API Gemini: {e}"
+                    st.session_state.ai_analysis_1 = f"Lỗi khi gọi API Gemini: {e}"
+           
+            # Phân tích 2: Dựa trên file .docx gốc
+            with st.spinner("AI đang phân tích nội dung file .docx của khách hàng..."):
+                if st.session_state.docx_text:
+                    prompt2 = f"""
+                    Với vai trò là một chuyên gia thẩm định tín dụng ngân hàng, hãy phân tích toàn bộ nội dung của phương án kinh doanh được khách hàng cung cấp trong file .docx dưới đây.
+                    
+                    Cần tập trung vào các điểm sau:
+                    1. Tóm tắt tổng quan về phương án kinh doanh
+                    2. Phân tích các điểm mạnh của phương án (ví dụ: kinh nghiệm, thị trường, sản phẩm/dịch vụ, khả năng cạnh tranh)
+                    3. Phân tích các điểm yếu hoặc các điểm cần làm rõ thêm
+                    4. Nhận diện các rủi ro tiềm ẩn (rủi ro thị trường, rủi ro hoạt động, rủi ro tài chính)
+                    5. Đánh giá tính khả thi và hiệu quả của phương án kinh doanh
+                    6. Đưa ra kết luận sơ bộ và các kiến nghị
+                    
+                    Nội dung phương án kinh doanh từ file .docx:
+                    ---
+                    {st.session_state.docx_text}
+                    ---
+                    """
+                    try:
+                        response2 = model.generate_content(prompt2)
+                        st.session_state.ai_analysis_2 = response2.text
+                    except Exception as e:
+                         st.session_state.ai_analysis_2 = f"Lỗi khi gọi API Gemini: {e}"
+                else:
+                    st.session_state.ai_analysis_2 = "Không có nội dung file .docx để phân tích."
+        
+        # Hiển thị kết quả phân tích
         if 'ai_analysis_1' in st.session_state:
-            with st.expander("1. Phân tích từ file .docx của khách hàng", expanded=True):
-                st.info("Nguồn dữ liệu: Phân tích từ file .docx của khách hàng.")
+            with st.expander("1. Phân tích từ dữ liệu trên ứng dụng", expanded=True):
+                st.info("Nguồn dữ liệu: Các thông số và chỉ số tài chính đã nhập/hiệu chỉnh trên ứng dụng.")
                 st.markdown(st.session_state.ai_analysis_1)
+        
         if 'ai_analysis_2' in st.session_state:
-            with st.expander("2. Phân tích từ các thông số và chỉ số đã tính toán", expanded=True):
-                st.info("Nguồn dữ liệu: Phân tích từ các thông số và chỉ số đã tính toán trên ứng dụng.")
+            with st.expander("2. Phân tích từ file .docx của khách hàng", expanded=True):
+                st.info("Nguồn dữ liệu: Nội dung phương án kinh doanh từ file .docx khách hàng tải lên.")
                 st.markdown(st.session_state.ai_analysis_2)
 # --------------------------------------------------------------------------------------
 # TAB 5: CHATBOT HỖ TRỢ
@@ -465,7 +475,7 @@ with tab5:
     else:
         try:
             # Khởi tạo model cho chatbot
-            model_chat = genai.GenerativeModel('gemini-2.5-flash')
+            model_chat = genai.GenerativeModel('gemini-2.0-flash-exp')
             chat = model_chat.start_chat(history=[])
         except Exception as e:
             st.error(f"Lỗi khởi tạo Gemini Chat: {e}")
