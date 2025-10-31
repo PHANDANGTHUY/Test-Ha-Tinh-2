@@ -32,7 +32,16 @@ def format_currency(value, decimal_places=0):
     """Định dạng số thành chuỗi tiền tệ với dấu chấm phân cách hàng nghìn."""
     if value is None or not isinstance(value, (int, float)):
         return "0"
-    return f"{value:,.{decimal_places}f}".replace(",", ".")
+    # Format với dấu phẩy trước
+    formatted = f"{value:,.{decimal_places}f}"
+    # Thay thế dấu chấm thập phân tạm thời bằng placeholder
+    formatted = formatted.replace(".", "DECIMAL")
+    # Thay thế dấu phẩy phân cách hàng nghìn thành dấu chấm
+    formatted = formatted.replace(",", ".")
+    # Khôi phục dấu phẩy thập phân (nếu có)
+    formatted = formatted.replace("DECIMAL", ",")
+    return formatted
+
 def extract_text_from_docx(docx_file):
     """Trích xuất toàn bộ văn bản từ file .docx."""
     try:
@@ -73,7 +82,7 @@ def parse_info_from_text(text):
     # Thông tin phương án vay
     info['muc_dich_vay'] = safe_search(r"Mục đích vay:\s*(.*?)\n", text) or "Kinh doanh vật liệu xây dựng"
     info['tong_nhu_cau_von'] = safe_search(r"- Chi phí kinh doanh:\s*([\d.,]+)\s*đồng", text, is_numeric=True, default=0)
-    info['von_doi_ung'] = safe_search(r"Vốn đối ứng.*?đồng,([\d.,]+)", text, is_numeric=True, default=0)  # Không có trong file, giữ default
+    info['von_doi_ung'] = safe_search(r"Vốn đối ứng.*?đồng,([\d.,]+)", text, is_numeric=True, default=0)  # Không có trong file, giữ default
     info['so_tien_vay'] = safe_search(r"Chênh lệch thu chi:\s*([\d.,]+)\s*đồng", text, is_numeric=True, default=0)  # Sử dụng chênh lệch làm proxy nếu cần
     info['lai_suat'] = safe_search(r"Lãi suất đề nghị:\s*([\d.,]+)%/năm", text, is_numeric=True, default=5.0)
     info['thoi_gian_vay'] = safe_search(r"Thời hạn cho vay:\s*(\d+)\s*tháng", text, is_numeric=True, default=3)
